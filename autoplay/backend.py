@@ -22,11 +22,14 @@ class Schema(dict):
                 continue
 
             doc['_path'] = path
-            parser = doc.get('parser', 'job')
+            parser = doc.get('_parser', 'job')
             getattr(self, f'parse_{parser}')(doc)
 
     def parse_job(self, doc):
         for key, value in doc.items():
+            if key.startswith('_'):
+                continue
+
             if isinstance(value, str) or isinstance(value, int):
                 self.environment.setdefault(key, value)
 
@@ -36,10 +39,14 @@ class Schema(dict):
 
     def parse_globals(self, doc):
         for key, value in doc.items():
+            if key.startswith('_'):
+                continue
+
             if isinstance(value, str) or isinstance(value, int):
                 var = self.environment
             else:
                 var = self.variables
+
             var.setdefault(key, value)
 
     @classmethod
@@ -74,13 +81,6 @@ class Play(list):
     @classmethod
     def cli(cls, name, plays):
         self = cls()
-        '''
-        self.context = {
-            key: value
-            for key, value in plays.schema[name].items()
-            if isinstance(value, int) or isinstance(value, str)
-        }
-        '''
 
         for i in plays.stages:
             val = plays.schema[name].get(i, [])
@@ -121,61 +121,86 @@ class Plays(list):
             self.append(Play.cli(name, self))
         return self
 
-    def send(self, line, p=None):
+    def send(self, line, linetoprint=None):
         if self.strategy == 'dryrun':
-            print(line)
+            print(linetoprint or line)
+
         else:
+            if linetoprint:
+                print(linetoprint)
+                self.proc.options['echo'] = False
+
             self.proc.send(line)
+
+            if linetoprint:
+                self.proc.options['echo'] = True
+
+    @property
+    def proc(self):
+        cached = getattr(self, '_proc', None)
+        if not cached:
+            cached = self._proc = ProcessController()
+            self._proc.run(self.shell.split(' '), {
+                'detached': True,
+                'private': True,
+                'echo': self.strategy != 'dryrun',
+                'when': [
+                    ['^AUTOPLAY_JOB_COMPLETE_TOKEN$', self.next_job],
+                    ['(?!^([0-9]* )?AUTOPLAY_.*_TOKEN$)', self.print_line],
+                    ['^AUTOPLAY_DONE_TOKEN$', self.next_cmd],
+                    ['^.*AUTOPLAY_ERR_TOKEN$', self.abort],
+                ]
+            })
+        return cached
 
     def __call__(self):
         print(f'# Starting with strategy: {self.strategy}')
-        proc = self.proc = ProcessController()
-        proc.run(self.shell.split(' '), {
-            'detached': True,
-            'private': True,
-            'echo': True,
-            'when': [
-                ['^AUTOPLAY_JOB_COMPLETE_TOKEN$', self.next_job],
-                ['(?!^([0-9]* )?AUTOPLAY_.*_TOKEN$)', self.print_line],
-                ['^AUTOPLAY_DONE_TOKEN$', self.next_cmd],
-                ['^.*AUTOPLAY_ERR_TOKEN$', self.abort],
-            ]
-        })
+        for key, value in self.environment.items():
+            self.send(f'export {key}="{value}"')
 
-        self.schema.environment.update(self.environment)
         for key, value in self.schema.environment.items():
-            self.send(f'export {key}={shlex.quote(value)}')
+            if key in self.environment:
+                continue
+            self.send(f'export {key}="{value}"')
 
         if self.play_count < len(self):
             self.play = self[self.play_count]
-            '''
-            for key, value in self.play.context.items():
-                self.send(f'export {key}={shlex.quote(value)}')
-            '''
 
-            if self.command_count < len(self.play):
-                command = self.play[self.command_count]
-                self.send('(' + command.line +
-                           ' && echo AUTOPLAY_DONE_TOKEN )' +
-                           ' || echo $? AUTOPLAY_ERR_TOKEN')
+            if self.strategy == 'dryrun':
+                self.dryrun()
             else:
-                if self.exit_status is None:
-                    self.exit_status = 0
-                self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
+                self.run()
         else:
-            proc.close()
-        return proc.return_value
+            self.proc.close()
+
+        return self.proc.return_value
+
+    def dryrun(self):
+        for cmd in self.play:
+            print(cmd.line)
+
+    def run(self):
+        if self.command_count < len(self.play):
+            command = self.play[self.command_count]
+            self.send('(' + command.line +
+                      ' && echo AUTOPLAY_DONE_TOKEN )' +
+                      ' || echo $? AUTOPLAY_ERR_TOKEN',
+                      command.line)
+        else:
+            if self.exit_status is None:
+                self.exit_status = 0
+            self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
 
     def next_job(self):
         self.play_count = 0
         self.command_count += 1
         self()
 
-    def next_cmd(self):
+    def next_cmd(self, c, l):
         self.command_count += 1
         self()
 
-    def abort(self):
+    def abort(self, c, l):
         self.command_count = len(self.play)
         self.exit_status = None
 

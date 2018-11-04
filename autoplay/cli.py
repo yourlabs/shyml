@@ -10,7 +10,7 @@ import clilabs.builtins
 help = clilabs.builtins.help
 
 
-def main(*args, **environment):
+def main(*args):
     '''
     Bash orchestrator for yaml.
 
@@ -26,7 +26,7 @@ def main(*args, **environment):
         autoplay script [--dryrun] [job]
         autoplay clean [--dryrun] [job]
     '''
-    args = args or sys.argv[:]
+    args, environment = clilabs.expand(*(args or sys.argv[:]))
 
     try:
         jobs = args[2]
@@ -44,6 +44,9 @@ def main(*args, **environment):
         command = command or 'debug'
 
     plays = Plays.cli(jobs.split(',') if jobs else [])
+
+    for key, value in environment.items():
+        plays.environment[key] = value
 
     if command == 'help':
         print('# Found jobs:')
