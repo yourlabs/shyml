@@ -105,7 +105,7 @@ class Play(list):
 
 class Plays(list):
     def __init__(self):
-        self.play_count = 0
+        self.job_count = 0
         self.command_count = 0
         self.exit_status = None
         self.stages = ['setup', 'script', 'clean']
@@ -137,10 +137,10 @@ class Plays(list):
 
     @property
     def proc(self):
-        cached = getattr(self, '_proc', None)
-        if not cached:
-            cached = self._proc = ProcessController()
-            self._proc.run(self.shell.split(' '), {
+        proc = getattr(self, '_proc', None)
+        if not proc:
+            proc = self._proc = ProcessController()
+            proc.run(self.shell.split(' '), {
                 'detached': True,
                 'private': True,
                 'echo': self.strategy != 'dryrun',
@@ -151,20 +151,21 @@ class Plays(list):
                     ['^.*AUTOPLAY_ERR_TOKEN$', self.abort],
                 ]
             })
-        return cached
+
+            for key, value in self.environment.items():
+                self.send(f'export {key}="{value}"')
+
+            for key, value in self.schema.environment.items():
+                if key in self.environment:
+                    continue
+                self.send(f'export {key}="{value}"')
+
+        return proc
 
     def __call__(self):
         print(f'# Starting with strategy: {self.strategy}')
-        for key, value in self.environment.items():
-            self.send(f'export {key}="{value}"')
-
-        for key, value in self.schema.environment.items():
-            if key in self.environment:
-                continue
-            self.send(f'export {key}="{value}"')
-
-        if self.play_count < len(self):
-            self.play = self[self.play_count]
+        if self.job_count < len(self):
+            self.play = self[self.job_count]
 
             if self.strategy == 'dryrun':
                 self.dryrun()
@@ -190,10 +191,13 @@ class Plays(list):
             if self.exit_status is None:
                 self.exit_status = 0
             self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
+        pid, status = self.proc.wait()
+        print()
+        return self.proc.exit_status or 0
 
     def next_job(self):
-        self.play_count = 0
-        self.command_count += 1
+        self.command_count = 0
+        self.job_count += 1
         self()
 
     def next_cmd(self, c, l):
