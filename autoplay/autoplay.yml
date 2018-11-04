@@ -1,12 +1,26 @@
 ---
-name: example
-example_var: ./autoplay-example
-multiline_var: |
-  foo
-  bar
-setup:
-- test -f $example_var || echo "$multiline_var" > $example_var
+parser: globals
+pypirc_path: $HOME/.pypirc
+shells:
+  bash:
+  - bash -eux
+  docker:
+  - docker run
+      --rm
+      -it
+      alpine:lastest
+
+---
+name: twine
+pypirc: |
+  [pypi]
+  username=${pypi_user}
+  password=${pypi_pass}
 script:
-- cat $example_var
-services:
-- watch $example_var
+- env
+- test -f $pypirc_path || cat $pypirc > $pypirc_path
+- for i in $(find . -name '*.po'); do msgfmt $i -o ${i/.po/.mo}; done
+- python3 setup.py explain
+- rm -rf dist
+- python3 setup.py sdist
+- twine upload dist/*

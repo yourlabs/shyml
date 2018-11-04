@@ -8,7 +8,7 @@ setup(
     keywords='automation cli',
     entry_points={
         'console_scripts': [
-            'autoplay = autoplay:cli',
+            'autoplay = autoplay.cli:main',
         ],
     },
     install_requires=['clilabs', 'processcontroller'],
