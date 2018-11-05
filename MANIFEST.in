@@ -1,0 +1,2 @@
+include requirements.txt bash-completion.sh *.rst LICENSE
+recursive-include autoplay *.yml *.yaml *.sh *.rst *.html *.css *.js *.py *.po *.mo *.conf *.j2 *.txt

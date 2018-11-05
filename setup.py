@@ -10,6 +10,11 @@ setup(
         'console_scripts': [
             'autoplay = autoplay.cli:main',
         ],
+        'autoplay_strategies': [
+            'local = autoplay.strategy:Local',
+            'docker = autoplay.strategy:Docker',
+            'virtualenv = autoplay.strategy:Virtualenv',
+        ],
     },
     install_requires=['clilabs', 'processcontroller'],
     classifiers=[

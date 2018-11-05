@@ -1,7 +1,8 @@
 import pprint
 import sys
 
-from autoplay.backend import Plays
+from autoplay.schema import Schema
+from autoplay.strategy import get_strategy
 
 import clilabs
 import clilabs.builtins
@@ -26,7 +27,7 @@ def main(*args):
         autoplay script [--dryrun] [job]
         autoplay clean [--dryrun] [job]
     '''
-    args, environment = clilabs.expand(*(args or sys.argv[:]))
+    args, kwargs = clilabs.expand(*(args or sys.argv[:]))
 
     try:
         jobs = args[2]
@@ -43,15 +44,12 @@ def main(*args):
     else:
         command = command or 'debug'
 
-    plays = Plays.cli(jobs.split(',') if jobs else [])
-
-    for key, value in environment.items():
-        plays.environment[key] = value
+    schema = Schema.cli()
 
     if command == 'help':
         print('# Found jobs:')
         print('')
-        for i in plays.schema.keys():
+        for i in schema.keys():
             print(' -', i)
         print('')
         print('# Run autoplay describe [job] to see one of them')
@@ -61,13 +59,17 @@ def main(*args):
 
     elif command == 'describe':
         for job in jobs.split(',') if jobs else []:
-            pprint.pprint(plays.schema[job])
+            pprint.pprint(schema[job])
         return
 
     elif command in ['setup', 'script', 'clean']:
-        plays.stages = [command]
+        kwargs['stages'] = command
 
-    if 'dryrun' in clilabs.context.args:
-        plays.strategy = 'dryrun'
+    strategy = get_strategy(
+        kwargs.pop('strategy', 'local')
+    )(schema, **kwargs)
 
-    return plays()
+    for name in jobs.split(','):
+        strategy.load_job(name)
+
+    return strategy()
