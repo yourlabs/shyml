@@ -1,6 +1,6 @@
 ---
-_parser: globals
-pypirc_path: $HOME/.pypirc
+env:
+  pypirc_path: $HOME/.pypirc
 shells:
   bash:
   - bash -eux
@@ -12,10 +12,11 @@ shells:
 
 ---
 name: twine
-pypirc: |
-  [pypi]
-  username=${pypi_user}
-  password=${pypi_pass}
+env:
+  pypirc: |
+    [pypi]
+    username=${pypi_user}
+    password=${pypi_pass}
 setup:
 - test -f $pypirc_path || cat $pypirc > $pypirc_path
 script:

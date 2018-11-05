@@ -21,8 +21,10 @@ class Strategy:
         self.stages = options.pop('stages', 'setup,script,clean').split(',')
         self.environment = options
         self.jobs = []
+        self.job_names = []
 
     def load_job(self, name):
+        self.job_names.append(name)
         self.jobs.append(self.get_commands(name))
 
     def get_commands(self, name):
@@ -82,6 +84,9 @@ class Local(Strategy):
                     continue
                 self.send(f'export {key}="{value}"')
 
+            for key, value in self.doc.get('env', {}).items():
+                self.send(f'export {key}="{value}"')
+
         return proc
 
     def send(self, line, linetoprint=None):
@@ -118,9 +123,15 @@ class Local(Strategy):
         print()
         return self.proc.return_value or 0
 
+    @property
+    def doc(self):
+        return self.schema[self.job_names[self.job_count]]
+
     def next_job(self):
         self.command_count = 0
         self.job_count += 1
+        for key, value in self.doc.get('env', {}).items():
+            self.send(f'export {key}="{value}"')
         self()
 
     def next_cmd(self, c, l):
@@ -128,7 +139,7 @@ class Local(Strategy):
         self()
 
     def abort(self, c, l):
-        self.command_count = len(self.play)
+        self.command_count = len(self.job)
         self.exit_status = None
 
     def print_line(self, c, l):

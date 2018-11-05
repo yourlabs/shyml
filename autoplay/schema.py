@@ -6,7 +6,6 @@ class Schema(dict):
     def parse(self, path):
         self.shells = dict()
         self.environment = dict()
-        self.variables = dict()
         self.plugins = dict()
 
         with open(path, 'r') as f:
@@ -16,33 +15,12 @@ class Schema(dict):
             if not doc:
                 continue
 
-            doc['_path'] = path
-            parser = doc.get('_parser', 'job')
-            getattr(self, f'parse_{parser}')(doc)
-
-    def parse_job(self, doc):
-        for key, value in doc.items():
-            if key.startswith('_'):
-                continue
-
-            if isinstance(value, str) or isinstance(value, int):
-                self.environment.setdefault(key, value)
-
-        name = doc.get('name', 'default')
-        if name not in self:
-            self[name] = doc
-
-    def parse_globals(self, doc):
-        for key, value in doc.items():
-            if key.startswith('_'):
-                continue
-
-            if isinstance(value, str) or isinstance(value, int):
-                var = self.environment
+            env = doc.get('env', {})
+            if 'name' not in doc:
+                for key, value in env.items():
+                    self.environment.setdefault(key, value)
             else:
-                var = self.variables
-
-            var.setdefault(key, value)
+                self[doc['name']] = doc
 
     @classmethod
     def cli(cls):
