@@ -30,4 +30,9 @@ Create a file with name ``autoplay.yml`` containing::
     script:
     - cat $example_var
 
-Then, see the commands it would execute with ``autoplay example``...
+    ---
+    name: test
+    requires:
+    - example
+
+Then, see the commands it would execute with ``autoplay run example mode=dryrun``...

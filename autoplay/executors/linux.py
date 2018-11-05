@@ -1,3 +1,6 @@
+import os
+import pty
+
 from autoplay.executor import Executor
 
 from processcontroller import ProcessController
