@@ -13,4 +13,3 @@ class Docker(Executor):
 
     def run(self):
         self.return_value = 0
-        command = self.job[self.command_count]
