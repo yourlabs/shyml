@@ -28,12 +28,19 @@ class Executor:
         self.jobs.append(self.get_commands(name))
 
     def get_commands(self, name):
+        deps = self.schema[name].get('requires', [])
         dst_cmds = []
         for stage in self.stages:
             src_cmds = self.schema[name].get(stage, [])
 
             if not isinstance(src_cmds, list):
                 src_cmds = [src_cmds]
+
+            for dep in deps:
+                deps_cmds = self.schema[dep].get(stage, [])
+                if not isinstance(deps_cmds, list):
+                    deps_cmds = [deps_cmds]
+                src_cmds = deps_cmds + src_cmds
 
             for cmd in src_cmds:
                 dst_cmds.append(cmd)
