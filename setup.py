@@ -10,10 +10,10 @@ setup(
         'console_scripts': [
             'autoplay = autoplay.cli:main',
         ],
-        'autoplay_strategies': [
-            'local = autoplay.strategy:Local',
-            'docker = autoplay.strategy:Docker',
-            'virtualenv = autoplay.strategy:Virtualenv',
+        'autoplay_executors': [
+            'linux = autoplay.executors.linux:Linux',
+            'docker = autoplay.executors.docker:Docker',
+            'venv = autoplay.executors.venv:Virtualenv',
         ],
     },
     install_requires=['clilabs', 'processcontroller'],

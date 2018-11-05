@@ -2,7 +2,7 @@ import pprint
 import sys
 
 from autoplay.schema import Schema
-from autoplay.strategy import get_strategy
+from autoplay.executor import get_executor
 
 import clilabs
 import clilabs.builtins
@@ -65,8 +65,8 @@ def main(*args):
     elif command in ['setup', 'script', 'clean']:
         kwargs['stages'] = command
 
-    strategy = get_strategy(
-        kwargs.pop('strategy', 'local')
+    strategy = get_executor(
+        kwargs.pop('executor', 'linux')
     )(schema, **kwargs)
 
     for name in jobs.split(','):

@@ -1,62 +1,18 @@
-import pkg_resources
+from autoplay.executor import Executor
 
 from processcontroller import ProcessController
 
 
-def get_strategy(strategy_name):
-    strategies = pkg_resources.iter_entry_points('autoplay_strategies')
-    for entry in strategies:
-        if entry.name == strategy_name:
-            return entry.load()
-
-
-class Strategy:
-    def __init__(self, schema, **options):
-        self.command_count = 0
-        self.job_count = 0
-        self.environment = {}
-        self.exit_status = None
-        self.mode = options.pop('mode', 'run')
-        self.schema = schema
-        self.stages = options.pop('stages', 'setup,script,clean').split(',')
-        self.environment = options
-        self.jobs = []
-        self.job_names = []
-
-    def load_job(self, name):
-        self.job_names.append(name)
-        self.jobs.append(self.get_commands(name))
-
-    def get_commands(self, name):
-        dst_cmds = []
-        for stage in self.stages:
-            src_cmds = self.schema[name].get(stage, [])
-
-            if not isinstance(src_cmds, list):
-                src_cmds = [src_cmds]
-
-            for cmd in src_cmds:
-                dst_cmds.append(cmd)
-
-        return dst_cmds
-
-
-class Local(Strategy):
+class Linux(Executor):
     def __init__(self, schema, **options):
         super().__init__(schema, **options)
         self.shell = '/bin/bash -eu'
 
-    def __call__(self):
-        if self.job_count < len(self.jobs):
-            self.job = self.jobs[self.job_count]
+    def clean(self):
+        self.proc.close()
 
-            if self.mode == 'dryrun':
-                self.dryrun()
-            else:
-                self.run()
-        else:
-            self.proc.close()
-
+    @property
+    def return_value(self):
         return self.proc.return_value
 
     @property
@@ -76,18 +32,19 @@ class Local(Strategy):
                 ]
             })
 
-            for key, value in self.environment.items():
-                self.send(f'export {key}="{value}"')
-
-            for key, value in self.schema.environment.items():
-                if key in self.environment:
-                    continue
-                self.send(f'export {key}="{value}"')
-
-            for key, value in self.doc.get('env', {}).items():
-                self.send(f'export {key}="{value}"')
-
         return proc
+
+    def init(self):
+        for key, value in self.environment.items():
+            self.send(f'export {key}="{value}"')
+
+        for key, value in self.schema.environment.items():
+            if key in self.environment:
+                continue
+            self.send(f'export {key}="{value}"')
+
+        for key, value in self.doc.get('env', {}).items():
+            self.send(f'export {key}="{value}"')
 
     def send(self, line, linetoprint=None):
         if self.mode == 'dryrun':
@@ -144,11 +101,3 @@ class Local(Strategy):
 
     def print_line(self, c, l):
         os.write(pty.STDOUT_FILENO, l.encode())
-
-
-class Docker(Strategy):
-    pass
-
-
-class Virtualenv(Strategy):
-    pass
