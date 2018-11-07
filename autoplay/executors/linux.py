@@ -71,7 +71,7 @@ class Linux(Executor):
     def run(self):
         if self.command_count < len(self.job):
             command = self.job[self.command_count]
-            self.send('(' + command +
+            self.send('((' + command + ')' +
                       ' && echo AUTOPLAY_DONE_TOKEN )' +
                       ' || echo $? AUTOPLAY_ERR_TOKEN',
                       )
@@ -79,7 +79,6 @@ class Linux(Executor):
             if self.exit_status is None:
                 self.exit_status = 0
             self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
-        pid, status = self.proc.wait()
         print()
         return self.proc.return_value or 0
 
@@ -104,3 +103,6 @@ class Linux(Executor):
 
     def print_line(self, c, l):
         os.write(pty.STDOUT_FILENO, l.encode())
+
+    def wait(self):
+        return self.proc.wait()
