@@ -72,4 +72,5 @@ def main(*args):
     for name in jobs.split(','):
         strategy.load_job(name)
 
-    return strategy()
+    strategy()
+    return strategy.wait()

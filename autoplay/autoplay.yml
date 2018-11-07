@@ -18,7 +18,7 @@ env:
     username=${pypi_user}
     password=${pypi_pass}
 setup:
-- test -f $pypirc_path || cat $pypirc > $pypirc_path
+- test -f $pypirc_path || echo $pypirc > $pypirc_path
 script:
 - for i in $(find . -name '*.po'); do msgfmt $i -o ${i/.po/.mo}; done
 - python3 setup.py explain
