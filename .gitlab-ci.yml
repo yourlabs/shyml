@@ -6,7 +6,7 @@ qa:
 pypi:
   stage: deploy
   only:
-  - /^\d+\./
+  - /^v\d+\./
   image: yourlabs/python:autoplay
   script:
   - autoplay run twine
