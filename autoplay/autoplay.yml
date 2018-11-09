@@ -25,3 +25,9 @@ script:
 - rm -rf dist
 - python3 setup.py sdist
 - twine upload dist/*
+
+---
+name: install
+script:
+- '[ ! -f requirements.txt ] || pip install -r requirements.txt'
+- pip install -e .
