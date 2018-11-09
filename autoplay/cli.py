@@ -29,17 +29,17 @@ def main(*args):
     '''
     args, kwargs = clilabs.expand(*(args or sys.argv[:]))
 
-    try:
+    if len(args) > 2:
         jobs = args[2]
-    except IndexError:
+    else:
         jobs = None
 
-    try:
+    if len(args) > 1:
         command = args[1]
-    except IndexError:
+    else:
         command = None
 
-    if not jobs and not command:
+    if not jobs:
         command = 'help'
     else:
         command = command or 'debug'
