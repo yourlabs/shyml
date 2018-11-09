@@ -106,6 +106,3 @@ class Linux(Executor):
 
     def print_line(self, c, l):
         os.write(pty.STDOUT_FILENO, l.encode())
-
-    def wait(self):
-        return self.proc.wait()
