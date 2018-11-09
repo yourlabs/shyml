@@ -15,8 +15,8 @@ name: twine
 env:
   pypirc: |
     [pypi]
-    username=${pypi_user}
-    password=${pypi_pass}
+    username=${pypi_user-}
+    password=${pypi_pass-}
 setup:
 - test -f $pypirc_path || echo $pypirc > $pypirc_path
 script:
