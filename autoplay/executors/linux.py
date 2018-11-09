@@ -12,6 +12,8 @@ class Linux(Executor):
         self.shell = '/bin/bash -eu'
 
     def wait(self):
+        if self.mode == 'dryrun':
+            return True
         return self.proc.wait()
 
     def clean(self):

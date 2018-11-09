@@ -58,3 +58,6 @@ class Executor:
         else:
             self.clean()
         return self.return_value
+
+    def wait(self):
+        return True
