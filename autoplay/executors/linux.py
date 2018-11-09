@@ -11,8 +11,11 @@ class Linux(Executor):
         super().__init__(schema, **options)
         self.shell = '/bin/bash -eu'
 
+    def wait(self):
+        return self.proc.wait()
+
     def clean(self):
-        self.proc.close()
+        return self.proc.close()
 
     @property
     def return_value(self):
@@ -80,7 +83,7 @@ class Linux(Executor):
                 self.exit_status = 0
             self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
         print()
-        return self.proc.return_value or 0
+        return self.return_value or 0
 
     @property
     def doc(self):
