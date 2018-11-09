@@ -3,11 +3,6 @@ qa:
   image: yourlabs/python
   script: flake8
 
-test:
-  stage: test
-  image: yourlabs/python
-  script: py.test -v --cov
-
 pypi:
   stage: deploy
   only:
