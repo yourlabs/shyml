@@ -31,18 +31,12 @@ def main(*args):
 
     if len(args) > 2:
         jobs = args[2]
-    else:
-        jobs = None
-
-    if len(args) > 1:
         command = args[1]
+    elif len(args) == 2:
+        jobs = args[1]
+        command = 'run'
     else:
-        command = None
-
-    if not jobs:
         command = 'help'
-    else:
-        command = command or 'debug'
 
     schema = Schema.cli()
 
