@@ -91,7 +91,7 @@ class Linux(Executor):
         else:
             if self.exit_status is None:
                 self.exit_status = 0
-            self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
+            self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN', '')
         print()
         return self.exit_status
 
