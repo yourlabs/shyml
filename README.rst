@@ -13,7 +13,9 @@ on the ``autoplay/autoplay.yml`` file which defines a few default jobs. The
 twine job for example will build .po files and make a python package that it
 will upload with twine, to automate python package release::
 
-    autoplay run twine pypi_user=jpic pypi_pass=lol mode=dryrun
+    autoplay debug twine
+    autoplay twine mode=dryrun
+    TWINE_USERNAME=... TWINE_PASSWORD=.. autoplay twine
 
 Create a file with name ``autoplay.yml`` containing::
 
