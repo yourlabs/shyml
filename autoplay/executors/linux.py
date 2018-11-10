@@ -9,12 +9,17 @@ from processcontroller import ProcessController
 class Linux(Executor):
     def __init__(self, schema, **options):
         super().__init__(schema, **options)
+        self.exit_status = 0
         self.shell = '/bin/bash -eu'
 
     def wait(self):
         if self.mode == 'dryrun':
             return True
-        return self.proc.wait()
+        pid, retcode = self.proc.wait()
+        if self.exit_status:
+            return self.exit_status
+        else:
+            return retcode
 
     def clean(self):
         return self.proc.close()
@@ -60,13 +65,14 @@ class Linux(Executor):
             print(linetoprint or line)
 
         else:
-            if linetoprint:
-                print(linetoprint)
+            if linetoprint is not None:
+                if linetoprint != '':
+                    print(linetoprint)
                 self.proc.options['echo'] = False
 
             self.proc.send(line)
 
-            if linetoprint:
+            if linetoprint is not None:
                 self.proc.options['echo'] = True
 
     def dryrun(self):
@@ -87,7 +93,7 @@ class Linux(Executor):
                 self.exit_status = 0
             self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN')
         print()
-        return self.return_value or 0
+        return self.exit_status
 
     @property
     def doc(self):
