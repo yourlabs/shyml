@@ -17,8 +17,8 @@ class Executor:
         self.environment = options
         self.exit_status = None
         self.mode = options.pop('mode', 'run')
+        self.strategy = options.pop('strategy', 'serial')
         self.schema = schema
-        self.stages = options.pop('stages', 'setup,script,clean').split(',')
         self.environment = options
         self.jobs = []
         self.job_names = []
@@ -30,20 +30,19 @@ class Executor:
     def get_commands(self, name):
         deps = self.schema[name].get('requires', [])
         dst_cmds = []
-        for stage in self.stages:
-            src_cmds = self.schema[name].get(stage, [])
+        src_cmds = self.schema[name].get('script', [])
 
-            if not isinstance(src_cmds, list):
-                src_cmds = [src_cmds]
+        if not isinstance(src_cmds, list):
+            src_cmds = [src_cmds]
 
-            for dep in deps:
-                deps_cmds = self.schema[dep].get(stage, [])
-                if not isinstance(deps_cmds, list):
-                    deps_cmds = [deps_cmds]
-                src_cmds = deps_cmds + src_cmds
+        for dep in deps:
+            deps_cmds = self.schema[dep].get('script', [])
+            if not isinstance(deps_cmds, list):
+                deps_cmds = [deps_cmds]
+            src_cmds = deps_cmds + src_cmds
 
-            for cmd in src_cmds:
-                dst_cmds.append(cmd)
+        for cmd in src_cmds:
+            dst_cmds.append(cmd)
 
         return dst_cmds
 
@@ -57,7 +56,6 @@ class Executor:
             getattr(self, self.mode)()
         else:
             self.clean()
-        return self.return_value
 
     def wait(self):
         return True

@@ -1,70 +1,83 @@
+'''
+Autoplay
+
+Bash orchestrator for yaml.
+
+Lets you run a job or dryrun it
+
+Autoplay usage:
+
+    autoplay
+    autoplay ls
+    autoplay describe [job]
+    autoplay run [--dryrun] [job]
+'''
+
 import pprint
-import sys
 
 from autoplay.schema import Schema
 from autoplay.executor import get_executor
 
-import clilabs
-import clilabs.builtins
+import cli2
 
 
-help = clilabs.builtins.help
-
-
-def main(*args):
+@cli2.option('dryrun', color=cli2.GREEN, help='Dry run the job')
+@cli2.option('executor', help='Executor type (linux, venv, docker)')
+@cli2.option('strategy', help='Strategy to user (serial, parrallele)')
+def run(jobs=None):
+    ''' run
     '''
-    Bash orchestrator for yaml.
+    if not jobs:
+        return ls()
 
-    Lets you run a job or dryrun it, or do just the setup/script/clean stage of
-    a job.
+    executor = get_executor(
+        console_script.parser.options.get('executor', 'linux')
+    )
 
-    Autoplay usage:
-
-        autoplay
-        autoplay describe [job]
-        autoplay run [--dryrun] [job]
-        autoplay setup [--dryrun] [job]
-        autoplay script [--dryrun] [job]
-        autoplay clean [--dryrun] [job]
-    '''
-    args, kwargs = clilabs.expand(*(args or sys.argv[:]))
-
-    if len(args) > 2:
-        jobs = args[2]
-        command = args[1]
-    elif len(args) == 2:
-        jobs = args[1]
-        command = 'run'
+    if console_script.parser.options.get('dryrun', False):
+        mode = 'dryrun'
     else:
-        command = 'help'
+        mode = 'run'
 
-    schema = Schema.cli()
-
-    if command == 'help':
-        print('# Found jobs:')
-        print('')
-        for i in schema.keys():
-            print(' -', i)
-        print('')
-        print('# Run autoplay describe [job] to see one of them')
-        print('')
-        print('# Generic help:')
-        return clilabs.builtins.help('autoplay.cli')
-
-    elif command == 'describe':
-        for job in jobs.split(',') if jobs else []:
-            pprint.pprint(schema[job])
-        return
-
-    elif command in ['setup', 'script', 'clean']:
-        kwargs['stages'] = command
-
-    strategy = get_executor(
-        kwargs.pop('executor', 'linux')
-    )(schema, **kwargs)
+    strategy = executor(console_script.schema, **{
+        'mode': mode,
+        'strategy': console_script.parser.options.get('strategy', 'serial'),
+    })
 
     for name in jobs.split(','):
         strategy.load_job(name)
 
+
     strategy()
     return strategy.wait()
+
+
+def ls():
+    print('# Found jobs:')
+    print('')
+    for i in console_script.schema.keys():
+        print(' -', i)
+    print('')
+    print('# Run autoplay describe [job] to see one of them')
+    print('')
+
+
+def describe(jobs):
+    ''' describe
+    '''
+    for job in jobs.split(',') if jobs else []:
+        pprint.pprint(console_script.schema[job])
+    return
+
+
+class ConsoleScript(cli2.ConsoleScript):
+    def call(self, command):
+        if command.name != 'help':
+            self.schema = Schema.cli()
+        return super().call(command)
+
+
+console_script = ConsoleScript(
+        __doc__,
+        default_command='run'
+    ).add_commands(run, describe)

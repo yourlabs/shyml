@@ -1,6 +1,7 @@
 ---
 env:
   pypirc_path: $HOME/.pypirc
+  toto: 'lol'
 shells:
   bash:
   - bash -eux
@@ -24,3 +25,20 @@ name: install
 script:
 - '[ ! -f requirements.txt ] || pip install -r requirements.txt'
 - pip install -e .
+---
+name: monitor
+script:
+- echo 'toto' > testfile_ertttrer
+- cat testfile_ertttrer
+- ls -la --color
+- echo $toto
+- env
+- export LOL='laughing'
+- echo $LOL
+- echo 'toto' > testfile_ertttrer
+- cat testfile_ertttrer
+- ls -la --color
+- echo $toto
+- env
+- export LOL='laughing'
+- echo $LOL

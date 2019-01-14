@@ -8,7 +8,7 @@ setup(
     keywords='automation cli',
     entry_points={
         'console_scripts': [
-            'autoplay = autoplay.cli:main',
+            'autoplay = autoplay.cli:console_script',
         ],
         'autoplay_executors': [
             'linux = autoplay.executors.linux:Linux',

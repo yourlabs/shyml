@@ -1,5 +1,6 @@
 import os
 import pty
+import time
 
 from autoplay.executor import Executor
 
@@ -10,81 +11,74 @@ class Linux(Executor):
     def __init__(self, schema, **options):
         super().__init__(schema, **options)
         self.exit_status = 0
+        self.prompt = os.environ['PS1'] = 'AUTOPLAY_PROMPT_HACK'
+        self.first_prompt = True
         self.shell = '/bin/bash -eu'
+        self._proc = None
 
     def wait(self):
-        if self.mode == 'dryrun':
-            return True
         pid, retcode = self.proc.wait()
-        if self.exit_status:
-            return self.exit_status
-        else:
-            return retcode
+        return self.exit_status
 
     def clean(self):
         return self.proc.close()
 
     @property
-    def return_value(self):
-        return self.proc.return_value
-
-    @property
     def proc(self):
-        proc = getattr(self, '_proc', None)
-        if not proc:
-            proc = self._proc = ProcessController()
-            proc.run(self.shell.split(' '), {
+        if not self._proc:
+            self._proc = ProcessController()
+            self._proc.run(self.shell.split(' '), {
                 'detached': True,
                 'private': True,
-                'echo': self.mode != 'dryrun',
+                'echo': False,
                 'decode': False,
                 'when': [
-                    ['^AUTOPLAY_JOB_COMPLETE_TOKEN$', self.next_job],
-                    ['(?!^([0-9]* )?AUTOPLAY_.*_TOKEN$)', self.print_line],
-                    ['^AUTOPLAY_DONE_TOKEN$', self.next_cmd],
-                    ['^.*AUTOPLAY_ERR_TOKEN$', self.abort],
+                    ['^AUTOPLAY_JOB_COMPLETE_TOKEN\r?\n$', self.next_job],
+                    ['^AUTOPLAY_DONE_TOKEN\r?\n$', self.next_cmd],
+                    ['^[0-9]+ AUTOPLAY_ERR_TOKEN\r?\n$', self.abort],
+                    [
+                        '^(?!^([0-9]* )?AUTOPLAY_.*_TOKEN\r?\n$)',
+                        self.print_line
+                    ],
                 ]
             })
-
-        return proc
+            self._proc.send(f'export PS1="{self.prompt}" && echo Hello')
+            while self.first_prompt:
+                time.sleep(0.5)
+                self._proc.send('')
+        return self._proc
 
     def init(self):
-        for key, value in self.environment.items():
-            self.send(f'export {key}="{value}"')
+        envvars = getattr(self.schema, 'environment', {})
+        envvars.update(getattr(self, 'environment', {}))
+        envvars.update(self.doc.get('env', {}))
+        added = []
 
-        for key, value in self.schema.environment.items():
-            if key in self.environment:
-                continue
-            self.send(f'export {key}="{value}"')
-
-        for key, value in self.doc.get('env', {}).items():
-            self.send(f'export {key}="{value}"')
+        for key, value in envvars.items():
+            if key not in added:
+                added += key
+                line = f'export {key}="{value}"'
+                self.send(line, line)
 
     def send(self, line, linetoprint=None):
-        if self.mode == 'dryrun':
-            print(linetoprint or line)
+        proc = self.proc
 
-        else:
-            if linetoprint is not None:
-                if linetoprint != '':
-                    print(linetoprint)
-                self.proc.options['echo'] = False
-
-            self.proc.send(line)
-
-            if linetoprint is not None:
-                self.proc.options['echo'] = True
+        if linetoprint and linetoprint != '':
+            os.write(pty.STDOUT_FILENO, b'$> ' + linetoprint.encode() + b'\n')
+        proc.send(line)
 
     def dryrun(self):
         for job in self.jobs:
             for cmd in job:
                 print(cmd)
+        self.job_count = len(self.jobs)
+        self()
 
     def run(self):
         if self.command_count < len(self.job):
             command = self.job[self.command_count]
-            self.send('((' + command + ')' +
-                      ' && echo AUTOPLAY_DONE_TOKEN )' +
+            self.send('{ { ' + command + '; }' +
+                      ' && echo AUTOPLAY_DONE_TOKEN; }' +
                       ' || echo $? AUTOPLAY_ERR_TOKEN',
                       linetoprint=command
                       )
@@ -92,7 +86,6 @@ class Linux(Executor):
             if self.exit_status is None:
                 self.exit_status = 0
             self.send('echo AUTOPLAY_JOB_COMPLETE_TOKEN', '')
-        print()
         return self.exit_status
 
     @property
@@ -122,4 +115,8 @@ class Linux(Executor):
         self()
 
     def print_line(self, c, l):
-        os.write(pty.STDOUT_FILENO, l)
+        if self.first_prompt:
+            if l.decode().endswith(self.prompt + '\r\n'):
+                self.first_prompt = False
+        elif self.prompt not in l.decode():
+            os.write(pty.STDOUT_FILENO, l)
