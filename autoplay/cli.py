@@ -47,7 +47,6 @@ def run(jobs=None):
     for name in jobs.split(','):
         strategy.load_job(name)
 
-
     strategy()
     return strategy.wait()
 
