@@ -32,13 +32,7 @@ script:
 - cat testfile_ertttrer
 - ls -la --color
 - echo $toto
-- env
-- export LOL='laughing'
-- echo $LOL
-- echo 'toto' > testfile_ertttrer
-- cat testfile_ertttrer
-- ls -la --color
-- echo $toto
+- echo $tata
 - env
 - export LOL='laughing'
 - echo $LOL

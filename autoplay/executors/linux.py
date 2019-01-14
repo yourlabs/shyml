@@ -42,7 +42,7 @@ class Linux(Executor):
                     ],
                 ]
             })
-            self._proc.send(f'export PS1="{self.prompt}" && echo Hello')
+            self._proc.send(f'export PS1="{self.prompt}"')
             while self.first_prompt:
                 time.sleep(0.5)
                 self._proc.send('')

@@ -19,7 +19,7 @@ class Executor:
         self.mode = options.pop('mode', 'run')
         self.strategy = options.pop('strategy', 'serial')
         self.schema = schema
-        self.environment = options
+        self.environment = options.pop('vars', {})
         self.jobs = []
         self.job_names = []
 

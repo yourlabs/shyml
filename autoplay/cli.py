@@ -24,24 +24,25 @@ import cli2
 @cli2.option('dryrun', color=cli2.GREEN, help='Dry run the job')
 @cli2.option('executor', help='Executor type (linux, venv, docker)')
 @cli2.option('strategy', help='Strategy to user (serial, parrallele)')
-def run(jobs=None):
+def run(jobs=None, **kwargs):
     ''' run
     '''
     if not jobs:
         return ls()
 
     executor = get_executor(
-        console_script.parser.options.get('executor', 'linux')
+        console_script.parser.options.pop('executor', 'linux')
     )
 
-    if console_script.parser.options.get('dryrun', False):
+    if console_script.parser.options.pop('dryrun', False):
         mode = 'dryrun'
     else:
         mode = 'run'
 
     strategy = executor(console_script.schema, **{
         'mode': mode,
-        'strategy': console_script.parser.options.get('strategy', 'serial'),
+        'strategy': console_script.parser.options.pop('strategy', 'serial'),
+        'vars': console_script.parser.funckwargs
     })
 
     for name in jobs.split(','):
