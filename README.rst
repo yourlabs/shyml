@@ -27,14 +27,12 @@ It will look for jobs in a ``yash.yml`` file that you could write as such:
 
     ---
     name: example
-    env:
-      example_var: ./autoplay-example
-      multiline_var: |
-        foo
-        bar
     script:
-    - test -f $example_var || echo "$multiline_var" > $example_var
+    - myvar=x
     - some
          --super
-         --long
+         --long=$myvar
          line
+
+Then you could see your generated bash with `yaml example` and execute it with
+`yaml example | bash -eux` or something.

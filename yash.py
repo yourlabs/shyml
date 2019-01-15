@@ -21,7 +21,6 @@ def run(jobs=None, **kwargs):
     env.update(console_script.schema.environment)
 
     for job in jobs.split(','):
-        env.update(console_script.schema[job].get('env', {}))
         env.update(console_script.parser.funckwargs)
 
         for key, value in env.items():
