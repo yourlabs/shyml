@@ -2,7 +2,6 @@
 YaSH: The OBSCENE Bash orchestrator for yaml.
 """
 
-import collections
 import os
 import pprint
 import yaml
@@ -17,17 +16,7 @@ def run(jobs=None, **kwargs):
     if not jobs:
         return ls()
 
-    env = collections.OrderedDict()
-    env.update(console_script.schema.environment)
-
-    for job in jobs.split(','):
-        env.update(console_script.parser.funckwargs)
-
-        for key, value in env.items():
-            yield ''.join(['export ', str(key), '=', str(value)])
-
-        for line in console_script.schema[job].get('script', []):
-            yield line
+    yield from console_script.schema.script(*jobs.split(','))
 
 
 def ls():
@@ -55,9 +44,52 @@ class ConsoleScript(cli2.ConsoleScript):
         return super().call(command)
 
 
+class Job(dict):
+    @classmethod
+    def factory(cls, doc, schema):
+        job = cls(doc)
+        job.doc = doc
+        job.schema = schema
+        job.name = doc['name']
+        job.hook = doc.get('hook', None)
+        job.env = doc.get('env', {})
+        job.requires = doc.get('requires', [])
+        return job
+
+    def script(self):
+        env = dict()
+        for name in self.requires:
+            if self.schema[name].env:
+                env.update(self.schema[name].env)
+        env.update(self.env)
+        env.update(console_script.parser.funckwargs)
+
+        for key, value in env.items():
+            yield ''.join(['export ', str(key), '=', str(value)])
+
+        for name in self.requires:
+            yield from self.schema[name].script()
+
+        script = self.get('script')
+        if not isinstance(script, list):
+            script = [script]
+
+        for chunk in script:
+            yield chunk
+
+
 class Schema(dict):
     def __init__(self):
-        self.environment = dict()
+        self.hooks = {
+            'before jobs': [],
+        }
+
+    def script(self, *jobs):
+        for hook in self.hooks['before jobs']:
+            yield from hook.script()
+
+        for name in jobs:
+            yield from self[name].script()
 
     def parse(self, path):
         with open(path, 'r') as f:
@@ -67,11 +99,11 @@ class Schema(dict):
             if not doc:
                 continue
 
-            if 'name' not in doc:
-                for key, value in doc.get('env', {}).items():
-                    self.environment.setdefault(key, value)
-            else:
-                self[doc['name']] = doc
+            name = doc.get('name')
+            job = self[name] = Job.factory(doc, self)
+
+            if job.hook:
+                self.hooks[job.hook].append(job)
 
     @classmethod
     def cli(cls):
