@@ -9,4 +9,5 @@ pypi:
   - /^v\d+\./
   image: yourlabs/python
   script:
+  - pip install -e .
   - yash twine | bash -eux
