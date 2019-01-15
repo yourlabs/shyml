@@ -1,22 +1,11 @@
 from setuptools import setup
 
 setup(
-    name='autoplay',
-    versioning='distance',
-    url='https://yourlabs.io/oss/autoplay',
+    name='yash',
+    versioning='dev',
+    url='https://yourlabs.io/oss/yash',
     setup_requires='setupmeta',
     keywords='automation cli',
-    entry_points={
-        'console_scripts': [
-            'autoplay = autoplay.cli:console_script',
-        ],
-        'autoplay_executors': [
-            'linux = autoplay.executors.linux:Linux',
-            'docker = autoplay.executors.docker:Docker',
-            'venv = autoplay.executors.venv:Virtualenv',
-        ],
-    },
-    install_requires=['clilabs', 'processcontroller'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',

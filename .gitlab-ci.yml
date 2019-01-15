@@ -7,6 +7,6 @@ pypi:
   stage: deploy
   only:
   - /^v\d+\./
-  image: yourlabs/python:autoplay
+  image: yourlabs/python
   script:
-  - autoplay run twine
+  - yash twine | bash -eux
