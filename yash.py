@@ -9,6 +9,9 @@ import yaml
 import cli2
 
 
+YaSH = f'{cli2.GREEN}Y{cli2.YELLOW}a{cli2.RED}SH{cli2.RESET}'
+
+
 def run(jobs=None, **kwargs):
     """
     Render jobs defined in ./yash.yml or any yash.yml file.
@@ -20,13 +23,25 @@ def run(jobs=None, **kwargs):
 
 
 def ls():
-    print('# Found jobs:')
+    print(f'{YaSH} has found the following jobs:')
     print('')
     for i in console_script.schema.keys():
         print(' -', i)
     print('')
-    print('# Run autoplay describe [job] to see one of them')
-    print('')
+    print(''.join([
+        cli2.GREEN,
+        'yash [job]',
+        cli2.RESET,
+        '               ',
+        'to generate the shell script.',
+    ]))
+    print(''.join([
+        cli2.GREEN,
+        'yash [job] | bash -eux',
+        cli2.RESET,
+        '   ',
+        'to execute the shell script in bash.',
+    ]))
 
 
 def describe(jobs):
