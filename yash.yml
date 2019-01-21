@@ -1,8 +1,18 @@
 ---
+# test comm
 name: twine
-script:
-- for i in $(find . -name '*.po'); do msgfmt $i -o ${i/.po/.mo}; done
-- python3 setup.py explain
-- rm -rf dist
-- python3 setup.py sdist
-- twine upload dist/*
+color: green
+help: |
+  Automatic Python package upload to PyPi.
+
+  If msgfmt is found, it will recompile all .po files.
+script: |
+  if which msgfmt &> /dev/null; then
+    for i in $(find . -name '*.po'); do
+      msgfmt $i -o ${i/.po/.mo}
+    done
+  fi
+  python3 setup.py explain
+  rm -rf dist
+  python3 setup.py sdist
+  twine upload dist/*

@@ -3,9 +3,9 @@ YaSH: The OBSCENE Bash orchestrator for yaml.
 """
 
 import os
-import pprint
 import yaml
 
+import colorama
 import cli2
 
 
@@ -16,46 +16,85 @@ def run(jobs=None, **kwargs):
     """
     Render jobs defined in ./yash.yml or any yash.yml file.
     """
-    if not jobs:
-        return ls()
-
-    yield from console_script.schema.script(*jobs.split(','))
+    if jobs:
+        yield from console_script.schema.script(*jobs.split(','))
+    else:
+        yield from ls()
 
 
 def ls():
-    print(f'{YaSH} has found the following jobs:')
-    print('')
-    for i in console_script.schema.keys():
-        print(' -', i)
-    print('')
-    print(''.join([
+    yield f'{YaSH} has found the following jobs:'
+    yield ''
+
+    width = len(max(console_script.schema.keys() or [], key=len)) + 1
+    for name, job in console_script.schema.items():
+        line = ' ' + ''.join([
+            job.color_code,
+            name,
+            cli2.RESET,
+            (width - len(name)) * ' ',
+            job.help.split('\n')[0]
+        ])
+        yield line
+
+    yield ''
+    yield 'Usage:'
+    yield ''.join([
         cli2.GREEN,
         'yash [job]',
         cli2.RESET,
         '               ',
         'to generate the shell script.',
-    ]))
-    print(''.join([
+    ])
+    yield ''.join([
         cli2.GREEN,
         'yash [job] | bash -eux',
         cli2.RESET,
         '   ',
         'to execute the shell script in bash.',
-    ]))
+    ])
 
 
-def describe(jobs):
-    """ describe
+def help(job):
     """
-    for job in jobs.split(',') if jobs else []:
-        pprint.pprint(console_script.schema[job])
-    return
+    Show help for a job.
+
+    To get the list of jobs that you can get help for, run yash without
+    argument.
+    """
+    if job not in console_script.schema:
+        return '\n'.join([
+            f'{cli2.RED}{job}{cli2.RESET} not found in'
+        ] + list(console_script.schema.paths))
+
+    out = [
+        ' '.join([
+            'Showing help for',
+            ''.join([
+                cli2.GREEN,
+                job,
+                cli2.RESET,
+            ]),
+            'job from',
+            ''.join([
+                cli2.YELLOW,
+                console_script.schema[job].path,
+                cli2.RESET,
+            ]),
+        ]),
+        console_script.schema[job].help,
+        f'To see the generated bash for this job, just run:',
+        f'{cli2.GREEN}yash {job}{cli2.RESET}',
+        '',
+        f'To execute this job, you can pipe it to a shell like bash ie.:',
+        f'{cli2.GREEN}yash {job}{cli2.YELLOW} | bash -eux{cli2.RESET}',
+    ]
+    return '\n'.join(out)
 
 
 class ConsoleScript(cli2.ConsoleScript):
     def call(self, command):
-        if command.name != 'help':
-            self.schema = Schema.cli()
+        self.schema = Schema.cli()
         return super().call(command)
 
 
@@ -69,6 +108,9 @@ class Job(dict):
         job.hook = doc.get('hook', None)
         job.env = doc.get('env', {})
         job.requires = doc.get('requires', [])
+        job.help = doc.get('help', '')
+        job.color = doc.get('color', 'yellow')
+        job.color_code = getattr(colorama.Fore, job.color.upper(), cli2.RESET)
         return job
 
     def script(self):
@@ -98,6 +140,7 @@ class Schema(dict):
         self.hooks = {
             'before jobs': [],
         }
+        self.paths = []
 
     def script(self, *jobs):
         for hook in self.hooks['before jobs']:
@@ -108,7 +151,7 @@ class Schema(dict):
 
     def parse(self, path):
         with open(path, 'r') as f:
-            docs = [yaml.load(i) for i in f.read().split('---')]
+            docs = [yaml.load(i) for i in f.read().split('---') if i.strip()]
 
         for doc in docs:
             if not doc:
@@ -116,6 +159,7 @@ class Schema(dict):
 
             name = doc.get('name')
             job = self[name] = Job.factory(doc, self)
+            job.path = path
 
             if job.hook:
                 self.hooks[job.hook].append(job)
@@ -123,21 +167,29 @@ class Schema(dict):
     @classmethod
     def cli(cls):
         paths = [
-            name
-            for name in (
-                'yash.yml',
-                os.getenv('YASH'),
-                os.path.join(os.path.dirname(__file__), 'yash.yml'),
-            )
-            if name and os.path.exists(name)
+            'yash.yml',
+            os.getenv('YASH'),
+            os.path.join(os.path.dirname(__file__), 'yash.yml'),
         ]
+
         self = cls()
+
         for path in paths:
+            if not path:
+                continue
+
+            if path in self.paths:
+                continue
+
+            if not os.path.exists(path):
+                continue
+
             self.parse(path)
+
         return self
 
 
 console_script = ConsoleScript(
     __doc__,
     default_command='run'
-).add_commands(run, describe)
+).add_commands(run, help)
