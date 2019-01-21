@@ -12,8 +12,6 @@ pytest:
 
 pypi:
   stage: deploy
-  only:
-  - /^v\d+\./
   image: yourlabs/python
   script:
   - pip install -e .
