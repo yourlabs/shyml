@@ -1,4 +1,4 @@
-command: yash help
+command: shyml help
 retcode: 1
 stdout:
 Missing arguments: job
@@ -6,5 +6,5 @@ Missing arguments: job
 Signature: help(job)
 Show help for a job.
 
-To get the list of jobs that you can get help for, run yash without
+To get the list of jobs that you can get help for, run shyml without
 argument.
