@@ -6,9 +6,9 @@ Sometimes gnu make reminds me how old I am, shyml makes me feel like a baby agai
 Getting started
 ---------------
 
-Install with ``pip install shyml``. Add
+Install with ``pip install shyml``.
 
-.. note:: Add ``--user`` to pip install so that it installs in ~/.local/bin.
+.. note:: Use ``pip install --user`` for non-root install in ~/.local/bin.
 
 The ``shyml`` command will look for a file called ``sh.yml`` in the current
 directory and list the jobs it finds. It will merge them with the default jobs
