@@ -1,4 +1,4 @@
-command: yash twine
+command: shyml twine
 retcode: 0
 stdout:
 if which msgfmt &> /dev/null; then

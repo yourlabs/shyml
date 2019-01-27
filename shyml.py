@@ -1,5 +1,5 @@
 """
-YaSH: The OBSCENE Bash orchestrator for yaml.
+ShYml: The OBSCENE Bash orchestrator for yaml.
 """
 
 import os
@@ -9,12 +9,12 @@ import colorama
 import cli2
 
 
-YaSH = f'{cli2.GREEN}Y{cli2.YELLOW}a{cli2.RED}SH{cli2.RESET}'
+LOGO = f'{cli2.GREEN}Sh{cli2.YELLOW}Y{cli2.RED}ml{cli2.RESET}'
 
 
 def run(jobs=None, **kwargs):
     """
-    Render jobs defined in ./yash.yml or any yash.yml file.
+    Render jobs defined in ./sh.yml or any sh.yml file.
     """
     if jobs:
         yield from console_script.schema.script(*jobs.split(','))
@@ -23,7 +23,7 @@ def run(jobs=None, **kwargs):
 
 
 def ls():
-    yield f'{YaSH} has found the following jobs:'
+    yield f'{LOGO} has found the following jobs:'
     yield ''
 
     width = len(max(console_script.schema.keys() or [], key=len)) + 1
@@ -41,14 +41,14 @@ def ls():
     yield 'Usage:'
     yield ''.join([
         cli2.GREEN,
-        'yash [job]',
+        'shyml [job]',
         cli2.RESET,
         '               ',
         'to generate the shell script.',
     ])
     yield ''.join([
         cli2.GREEN,
-        'yash [job] | bash -eux',
+        'shyml [job] | bash -eux',
         cli2.RESET,
         '   ',
         'to execute the shell script in bash.',
@@ -59,7 +59,7 @@ def help(job):
     """
     Show help for a job.
 
-    To get the list of jobs that you can get help for, run yash without
+    To get the list of jobs that you can get help for, run shyml without
     argument.
     """
     if job not in console_script.schema:
@@ -84,10 +84,10 @@ def help(job):
         ]),
         console_script.schema[job].help,
         f'To see the generated bash for this job, just run:',
-        f'{cli2.GREEN}yash {job}{cli2.RESET}',
+        f'{cli2.GREEN}shyml {job}{cli2.RESET}',
         '',
         f'To execute this job, you can pipe it to a shell like bash ie.:',
-        f'{cli2.GREEN}yash {job}{cli2.YELLOW} | bash -eux{cli2.RESET}',
+        f'{cli2.GREEN}shyml {job}{cli2.YELLOW} | bash -eux{cli2.RESET}',
     ]
     return '\n'.join(out)
 
@@ -167,9 +167,9 @@ class Schema(dict):
     @classmethod
     def cli(cls):
         paths = [
-            'yash.yml',
+            'sh.yml',
             os.getenv('YASH'),
-            os.path.join(os.path.dirname(__file__), 'yash.yml'),
+            os.path.join(os.path.dirname(__file__), 'sh.yml'),
         ]
 
         self = cls()

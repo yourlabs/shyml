@@ -1,4 +1,4 @@
-command: yash help twine
+command: shyml help twine
 retcode: 1
 stdout:
 Showing help for twine redacted
@@ -7,7 +7,7 @@ Automatic Python package upload to PyPi.
 If msgfmt is found, it will recompile all .po files.
 
 To see the generated bash for this job, just run:
-yash twine
+shyml twine
 
 To execute this job, you can pipe it to a shell like bash ie.:
-yash twine | bash -eux
+shyml twine | bash -eux

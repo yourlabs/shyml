@@ -15,4 +15,4 @@ pypi:
   image: yourlabs/python
   script:
   - pip install -e .
-  - yash twine | bash -eux
+  - shyml twine | bash -eux
