@@ -1,2 +1,2 @@
 include *.rst
-recursive-include * sh.yml
+recursive-include shyml sh.yml
