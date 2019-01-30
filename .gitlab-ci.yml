@@ -15,6 +15,16 @@ pytest:
   - pip install -e .
   - py.test -v
 
+setup:
+  stage: test
+  image: yourlabs/python
+  script:
+  - pip uninstall shyml
+  - virtualenv testenv && source testenv/bin/activate
+  - python setup.py sdist
+  - cd dist && pip install *
+  - shyml | grep twine
+
 pypi:
   stage: deploy
   image: yourlabs/python
