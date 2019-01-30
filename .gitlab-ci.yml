@@ -18,14 +18,7 @@ pytest:
 pypi:
   stage: deploy
   image: yourlabs/python
+  except: tags
   script:
   - pip install -e .
   - shyml twine | bash -eux
-
-integration:
-  stage: deploy
-  image: yourlabs/python
-  script:
-  - pip uninstall shyml
-  - pip install -U shyml
-  - shyml | grep twine  # default job should be there
