@@ -39,7 +39,7 @@ def ls():
             yield line
         yield ''
     else:
-        yield 'No {cli2.RED}sh.yml{cli2.RESET} found !'
+        yield f'No {cli2.RED}sh.yml{cli2.RESET} found !'
 
     yield 'Usage:'
     yield ''.join([
