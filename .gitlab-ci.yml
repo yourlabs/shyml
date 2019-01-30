@@ -14,7 +14,7 @@ setup:
   stage: test
   image: yourlabs/python
   script:
-  - pip uninstall shyml
+  - pip uninstall --yes shyml
   - virtualenv testenv && source testenv/bin/activate
   - python setup.py sdist
   - cd dist && pip install *
