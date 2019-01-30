@@ -18,6 +18,8 @@ setup:
   - virtualenv testenv && source testenv/bin/activate
   - python setup.py sdist
   - cd dist && pip install *
+  - which shyml
+  - shyml
   - shyml | grep twine
 
 pypi:
