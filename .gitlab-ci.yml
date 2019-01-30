@@ -1,3 +1,8 @@
+stages:
+- test
+- deploy
+- integration
+
 qa:
   stage: test
   image: yourlabs/python
@@ -16,3 +21,11 @@ pypi:
   script:
   - pip install -e .
   - shyml twine | bash -eux
+
+integration:
+  stage: deploy
+  image: yourlabs/python
+  script:
+  - pip uninstall shyml
+  - pip install -U shyml
+  - shyml | grep twine  # default job should be there
