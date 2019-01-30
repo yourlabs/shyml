@@ -26,18 +26,21 @@ def ls():
     yield f'{LOGO} has found the following jobs:'
     yield ''
 
-    width = len(max(console_script.schema.keys() or [], key=len)) + 1
-    for name, job in console_script.schema.items():
-        line = ' ' + ''.join([
-            job.color_code,
-            name,
-            cli2.RESET,
-            (width - len(name)) * ' ',
-            job.help.split('\n')[0]
-        ])
-        yield line
+    if console_script.schema:
+        width = len(max(console_script.schema.keys(), key=len)) + 1
+        for name, job in console_script.schema.items():
+            line = ' ' + ''.join([
+                job.color_code,
+                name,
+                cli2.RESET,
+                (width - len(name)) * ' ',
+                job.help.split('\n')[0]
+            ])
+            yield line
+        yield ''
+    else:
+        yield 'No {cli2.RED}sh.yml{cli2.RESET} found !'
 
-    yield ''
     yield 'Usage:'
     yield ''.join([
         cli2.GREEN,
