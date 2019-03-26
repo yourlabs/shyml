@@ -2,14 +2,14 @@
 Orchestrate shell script units from a single sh.yml file.
 """
 
-import sys
-
+import cli2
+import colorama
 import os
 import shlex
+import subprocess
+import sys
+import tempfile
 import yaml
-
-import colorama
-import cli2
 
 
 LOGO = f'{cli2.GREEN}Sh{cli2.YELLOW}Y{cli2.RED}ml{cli2.RESET}'
@@ -62,25 +62,22 @@ def run(path, job=None, **environment):
         yield from schema.script(job.name)
         return 0
 
-    shell_arg = shell.split(' ')
+    fd, path = tempfile.mkstemp(prefix='.shyml', dir='.')
+    with open(path, 'w') as f:
+        for line in schema.script(job.name):
+            f.write(line + '\n')
 
-    code = ';\n'.join([
-        i for i in schema.script(job.name)
-        if i
-    ])
-    r, w = os.pipe()
-    if os.fork() == 0:
-        # Child process
-        os.dup2(r, sys.stdin.fileno())
-        os.close(r)
-        os.close(w)
-        os.execvp(shell_arg[0], shell_arg)
-    else:
-        # Parent process
-        os.close(r)
-        os.write(w, code.encode('utf8'))
-        os.close(w)  # When done writing
-        os.wait()
+    shell_arg = shell.split(' ') + [path]
+
+    proc = subprocess.Popen(
+        shell_arg,
+        stdin=sys.stdin,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+    )
+    proc.communicate()
+    os.unlink(path)
+    return proc.returncode
 
 
 def ls(schema, prefix=None):
