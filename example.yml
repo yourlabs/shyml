@@ -1,32 +1,21 @@
+#!/usr/bin/env shyml
 ---
-name: twine
-pypirc_path: ~/.pypirc
-pypirc: |
-  [pypi]
-  username=${pypi_user}
-  password=${pypi_pass}
-script:
-- test -f $pypirc_path || cat $pypirc > $pypirc_path
-- for i in $(find . -name '*.po'); do msgfmt $i -o ${i/.po/.mo}; done
-- python3 setup.py explain
-- rm -rf dist
-- python3 setup.py sdist
-- twine upload dist/*
-
+name: test
+color: green
+help: Testing commands
+env:
+  GLOBAL_ENV: something
 ---
-name: example
-example_var: ./autoplay-example
-multiline_var: |
-  foo
-  bar
-setup:
-- test -f $example_var || echo "$multiline_var" > $example_var
-script:
-- cat $example_var
-
+name: test.reset
+help: Example subcommand
+script: echo $GLOBAL_ENV $LOCAL_ENV
+color: red
+env:
+  LOCAL_ENV: other
 ---
-name: example-dev
-setups:
-- example
-services:
-- watch $example_var
+name: test.create
+color: yellow
+help: Example create subcommand
+script: echo $GLOBAL_ENV $LOCAL_ENV
+env:
+  LOCAL_ENV: create

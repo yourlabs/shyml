@@ -3,13 +3,6 @@ qa:
   image: yourlabs/python
   script: flake8
 
-pytest:
-  stage: test
-  image: yourlabs/python
-  script:
-  - pip install -e .
-  - py.test -v
-
 setup:
   stage: test
   image: yourlabs/python
@@ -19,13 +12,9 @@ setup:
   - python setup.py sdist
   - cd dist && pip install *
   - which shyml
-  - shyml
-  - shyml | grep twine
 
 pypi:
   stage: deploy
   image: yourlabs/python
   except: [tags]
-  script:
-  - pip install -e .
-  - shyml twine | bash -eux
+  script: pypi-release

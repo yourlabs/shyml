@@ -10,49 +10,35 @@ Install with ``pip install shyml``.
 
 .. note:: Use ``pip install --user`` for non-root install in ~/.local/bin.
 
-The ``shyml`` command will look for a file called ``sh.yml`` in the current
-directory and list the jobs it finds. It will merge them with the default jobs
-that are in the repository root and open for contributions ;)
-
-Write your ``sh.yml`` file as such for example:
+And then you can add files like that to your repositories:
 
 .. code-block:: yaml
 
+  #!/usr/bin/env shyml
+  name: test
+  help: Testing commands
+  script: some command
+  hook: before  # inject this job prior to others
+  env:
+    GLOBAL_ENV: something
 
-    ---
-    name: example
-    color: red          # yes, you can choose the color of your job
-    requires: other_job # disregard for now, it's for when your sh.yml grows up
-    script:
-    - myvar=x
-    - some
-         --super
-         --long=$myvar
-         line
+  ---
+  name: test.reset
+  help: Example subcommand
+  env:
+    LOCAL_ENV: other
+  script:
+  - echo $GLOBAL_ENV $LOCAL_ENV
+  - some
+       --super
+       --long=$myvar
+       line
+  - ./sh.yml test
 
-    ---
-    name: setup
-    hook: before jobs   # this will always execute before any job
-    script: |
-      something cool
-    env:
-      someglobal: foo
-
-You see, we have hooks, choosing colors to jobs (I choose so far: green for
-non-writing, orange for writing, red for destructive), or doing super long
-lines of shell commands without backslashes at the end are typically the kind
-of things that make me feel like a baby again.
-
-Without argument, ``shyml`` will just print out all jobs it finds.
-
-With an argument that matches a defined job, it will just output the generated
-shell script, you can pipe it to a shell if you want to execute it:
+Usage:
 
 .. code-block:: bash
 
-   shyml                       # lists jobs
-   shyml jobname               # print a job in bash
-   shyml jobname | bash -eux   # run a job in a local bash shell
-
-Then you could see your generated bash with ``shyml example`` and execute it
-with ``shyml example | docker run -it yourcontainer sh`` or something.
+   ./sh.yml                       # lists jobs
+   ./sh.yml -d jobname            # print a job script code
+   ./sh.yml jobname               # run a job in a local bash shell
