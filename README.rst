@@ -3,6 +3,9 @@ ShYml: write shell in sh.yml
 
 Sometimes gnu make reminds me how old I am, shyml makes me feel like a baby again.
 
+Note: CLI version 0.8 is incomptable with CLI version 0.7, now executes jobs by
+default and supports running with a shebang.
+
 Getting started
 ---------------
 
