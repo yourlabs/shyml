@@ -77,7 +77,7 @@ def run(path, job=None, **environment):
     )
     proc.communicate()
     os.unlink(path)
-    return proc.returncode
+    sys.exit(proc.returncode)
 
 
 def ls(schema, prefix=None):
