@@ -18,3 +18,4 @@ pypi:
   image: yourlabs/python
   except: [tags]
   script: pypi-release
+  trigger: oss/containers
