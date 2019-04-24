@@ -47,6 +47,10 @@ def run(path=None, job=None):
         yield from ls(schema)
         return
 
+    if job not in schema:
+        yield f'{cli2.RED}{job}{cli2.RESET} not found in {schema.path}'
+        return
+
     job = schema[job]
 
     if options.get('help', False):

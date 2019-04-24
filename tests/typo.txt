@@ -1,0 +1,4 @@
+command: shyml sh.yml foo
+retcode: 0
+stdout:
+foo not found in sh.yml
