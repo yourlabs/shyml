@@ -16,51 +16,48 @@ LOGO = f'{cli2.GREEN}Sh{cli2.YELLOW}Y{cli2.RED}ml{cli2.RESET}'
 
 
 @cli2.option(
-    'debug', alias='d', color=cli2.GREEN,
-    help='Dry run: output shell script for job'
+    'debug', alias='d', color=cli2.GREEN, immediate=True,
+    help='Dry run: output shell script for job',
 )
 @cli2.option(
-    'shell', alias='s', color=cli2.GREEN,
+    'shell', alias='s', color=cli2.GREEN, immediate=True,
     help='Shell to pipe commands to, default: /bin/bash -eux'
 )
 @cli2.option(
-    'help', alias='h', color=cli2.GREEN,
+    'help', alias='h', color=cli2.GREEN, immediate=True,
     help='Output help for a job in sh.yml'
 )
-def run(path, job=None, **environment):
+def run(path=None, job=None):
     """
     Render jobs defined in ./sh.yml or any sh.yml file.
     """
+    if not path:
+        yield from help()
+        return
+
     if not os.path.exists(path):
         raise cli2.Cli2Exception(f'{path} does not exist')
 
     options = console_script.parser.options
     shell = options.get('shell', '/bin/bash -eux')
 
-    schema = Schema()
-    schema.parse(path)
-
-    if options.get('help', False):
-        yield schema[job].help
-        return 0
-
-    if job and job not in schema:
-        yield '\n'.join([
-            f'{cli2.RED}{job}{cli2.RESET} not found in'
-        ] + list(schema.paths))
-        # yield f'Listing jobs found in {cli2.RED}{path}{cli2.RESET}'
-        job = None
+    schema = Schema.factory(path)
 
     if not job:
         yield from ls(schema)
-        return 0
+        return
 
     job = schema[job]
+
+    if options.get('help', False):
+        yield job.help or f'No help for {job.name}'
+        yield f'Try {cli2.GREEN}./sh.yml -h {job.name}{cli2.RESET}'
+        return
 
     if console_script.parser.options.get('debug', False):
         # generate from schema to support hooks
         yield from schema.script(job.name)
-        return 0
+        return
 
     fd, path = tempfile.mkstemp(prefix='.shyml', dir='.')
     with open(path, 'w') as f:
@@ -68,6 +65,11 @@ def run(path, job=None, **environment):
             f.write(line + '\n')
 
     shell_arg = shell.split(' ') + [path]
+
+    # 1337 ArGv InJeC710n H4ck: proxying argv from: shyml sh.yml JOB foobar
+    # And: proxying argv from: ./sh.yml JOB foobar
+    # Will cause $1 to be "foobar" in the script content of JOB
+    shell_arg += console_script.argv[3:]
 
     proc = subprocess.Popen(
         shell_arg,
@@ -81,10 +83,10 @@ def run(path, job=None, **environment):
 
 
 def ls(schema, prefix=None):
-    yield f'{LOGO} has found the following jobs:'
-    yield ''
-
     if schema:
+        yield f'{LOGO} has found the following jobs:'
+        yield ''
+
         width = len(max(schema.keys(), key=len)) + 1
 
         for name in sorted(schema.keys()):
@@ -101,33 +103,28 @@ def ls(schema, prefix=None):
 
             yield line
         yield ''
+        yield 'For help of a job, run: -h JOB'
+        yield 'For script of a job, run: -d JOB'
     else:
-        yield f'No {cli2.RED}sh.yml{cli2.RESET} found !'
-
-    yield f'''
-Create a sh.yml with any number of YAML documents, each containing at least a
-name string and a script string or list and/or env dict. Commit it in your
-repository then you can run:
-
-    shyml             {cli2.GREEN}show jobs in sh.yml{cli2.RESET}
-    shyml [job] -d    {cli2.GREEN}output the job's shell script{cli2.RESET}
-    shyml [job]       {cli2.YELLOW}execute the job's shell script{cli2.RESET}
-
-Note that shyml jobs should call other jobs by calling the shyml command.
-'''.strip()
+        yield f'{cli2.RED}Could not parse{cli2.RESET}: {schema.path} !'
 
 
-def help(job):
+def help(path=None, job=None):
     """
     Show help for a job.
 
     To get the list of jobs that you can get help for, run shyml without
     argument.
     """
-    if job not in console_script.schema:
-        return '\n'.join([
-            f'{cli2.RED}{job}{cli2.RESET} not found in'
-        ] + list(console_script.schema.paths))
+    schema = Schema.factory(path)
+
+    if not schema:
+        yield 'sh.yml not found, please start with README'
+        return
+
+    if job not in schema:
+        yield f'{cli2.RED}{job}{cli2.RESET} not found in {schema.path}'
+        return
 
     out = [
         ' '.join([
@@ -137,28 +134,18 @@ def help(job):
                 job,
                 cli2.RESET,
             ]),
-            'job from',
-            ''.join([
-                cli2.YELLOW,
-                console_script.schema[job].path,
-                cli2.RESET,
-            ]),
         ]),
-        console_script.schema[job].help,
+        schema[job].help,
         f'Output generated bash job:',
         f'{cli2.GREEN}shyml -d {job}{cli2.YELLOW}',
         '',
         f'Run the generated bash for this job:',
         f'{cli2.GREEN}shyml {job}{cli2.RESET}',
     ]
-    return '\n'.join(out)
+    yield '\n'.join(out)
 
 
 class ConsoleScript(cli2.ConsoleScript):
-    def call(self, command):
-        self.schema = Schema.cli()
-        return super().call(command)
-
     def __init__(self, doc=None, argv=None, default_command='help'):
         if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
             argv = [sys.argv[0]] + sys.argv[2:]
@@ -204,7 +191,6 @@ class Job(dict):
             if self.schema[name].env:
                 env.update(self.schema[name].env)
         env.update(self.env)
-        env.update(console_script.parser.funckwargs)
 
         for key, value in env.items():
             yield ''.join(['export ', str(key), '=', shlex.quote(str(value))])
@@ -225,11 +211,11 @@ class Job(dict):
 
 
 class Schema(dict):
-    def __init__(self):
+    def __init__(self, path):
         self.hooks = {
             'before': [],
         }
-        self.paths = []
+        self.path = path
 
     def script(self, *jobs):
         for hook in self.hooks['before']:
@@ -253,8 +239,8 @@ class Schema(dict):
                 ]))
             yield from self[name].script()
 
-    def parse(self, path):
-        with open(path, 'r') as f:
+    def parse(self):
+        with open(self.path, 'r') as f:
             docs = [
                 yaml.load(i, Loader=yaml.SafeLoader)
                 for i in f.read().split('---') if i.strip()
@@ -266,7 +252,6 @@ class Schema(dict):
 
             name = doc.get('name')
             job = self[name] = Job.factory(doc, self)
-            job.path = path
 
             if job.hook:
                 self.hooks[job.hook].append(job)
@@ -275,26 +260,14 @@ class Schema(dict):
             job.visit(self)
 
     @classmethod
-    def cli(cls):
-        paths = [
-            'sh.yml',
-            os.getenv('SHYML'),
-            os.path.join(os.path.dirname(__file__), 'sh.yml'),
-        ]
+    def factory(cls, path=None):
+        path = path or os.getenv('SHYML', 'sh.yml')
 
-        self = cls()
-
-        for path in paths:
-            if not path:
-                continue
-
-            if path in self.paths:
-                continue
-
-            if not os.path.exists(path):
-                continue
-
-            self.parse(path)
+        self = cls(path)
+        if not os.path.exists(path):
+            print(f'{cli2.RED}Could not find{cli2.RESET} {path}')
+        else:
+            self.parse()
 
         return self
 
@@ -302,4 +275,4 @@ class Schema(dict):
 console_script = cli2.ConsoleScript(
     __doc__,
     default_command='run'
-).add_commands(run, help)
+).add_commands(run)

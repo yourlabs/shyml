@@ -1,0 +1,30 @@
+#!/usr/bin/env shyml
+
+name: hello
+script: echo hello $@
+
+---
+name: install
+help: |
+  Setup and activate a venv for a python executable
+
+  Having venv=none makes this job a no-op.
+script: |
+  if [ "${venv-}" != "none" ]; then
+    python=${python-python3}
+    venv=${path-.venv.${python-python3}}
+
+    test -d $venv || virtualenv --python=$python $venv
+
+    set +eux; echo activating $venv; source $venv/bin/activate; set -eux
+  fi
+
+  pip install -e .
+
+---
+name: test
+script: py.test -v $@
+help: Test sh.yml
+requires:
+- install
+script: pip install pytest && pytest $@

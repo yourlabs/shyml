@@ -7,11 +7,9 @@ setup:
   stage: test
   image: yourlabs/python
   script:
-  - pip uninstall --yes shyml
-  - virtualenv testenv && source testenv/bin/activate
-  - python setup.py sdist
-  - cd dist && pip install *
-  - which shyml
+  # try the generated tarball
+  - rm -rf dist && python setup.py sdist && pip install dist/*
+  - ./sh.yml test
 
 pypi:
   stage: deploy

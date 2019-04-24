@@ -1,0 +1,5 @@
+command: shyml -h sh.yml hello
+retcode: 0
+stdout:
+No help for hello
+Try ./sh.yml -h hello
