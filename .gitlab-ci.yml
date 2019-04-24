@@ -16,5 +16,6 @@ pypi:
   image: yourlabs/python
   except: [tags]
   script: pypi-release
+  only: [master]
   # this is in paid gitlab only
   # trigger: oss/containers
