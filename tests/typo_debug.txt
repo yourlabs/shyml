@@ -1,0 +1,4 @@
+command: shyml -d sh.yml foo
+retcode: 0
+stdout:
+foo not found in sh.yml

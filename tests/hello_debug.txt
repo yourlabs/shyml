@@ -1,0 +1,4 @@
+command: shyml -d sh.yml hello
+retcode: 0
+stdout:
+echo hello $@

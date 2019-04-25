@@ -1,0 +1,8 @@
+command: shyml -h sh.yml install
+retcode: 0
+stdout:
+Setup and activate a venv for a python executable
+
+Having venv=none makes this job a no-op.
+
+Try ./sh.yml -h install
