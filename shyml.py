@@ -15,75 +15,68 @@ import yaml
 LOGO = f'{cli2.GREEN}Sh{cli2.YELLOW}Y{cli2.RED}ml{cli2.RESET}'
 
 
-@cli2.option(
-    'debug', alias='d', color=cli2.GREEN, immediate=True,
-    help='Dry run: output shell script for job',
-)
-@cli2.option(
-    'shell', alias='s', color=cli2.GREEN, immediate=True,
-    help='Shell to pipe commands to, default: /bin/bash -eux'
-)
-@cli2.option(
-    'help', alias='h', color=cli2.GREEN, immediate=True,
-    help='Output help for a job in sh.yml'
-)
-def run(path=None, job=None):
-    """
-    Render jobs defined in ./sh.yml or any sh.yml file.
-    """
-    if not path:
-        yield from help()
-        return
+class JobCommand:
+    def __init__(self, name):
+        self.__name__ = name
 
-    if not os.path.exists(path):
-        raise cli2.Cli2Exception(f'{path} does not exist')
+    def __call__(self, path=None, job=None, *args):
+        """
+        Render jobs defined in ./sh.yml or any sh.yml file.
+        """
+        if not path:
+            yield from help()
+            return
 
-    options = console_script.parser.options
-    shell = options.get('shell', '/bin/bash -eux')
+        if not os.path.exists(path):
+            raise cli2.Cli2Exception(f'{path} does not exist')
 
-    schema = Schema.factory(path)
+        schema = Schema.factory(path)
 
-    if not job:
-        yield from ls(schema)
-        return
+        if not job:
+            yield from ls(schema)
+            return
 
-    if job not in schema:
-        yield f'{cli2.RED}{job}{cli2.RESET} not found in {schema.path}'
-        return
+        if job not in schema:
+            yield f'{cli2.RED}{job}{cli2.RESET} not found in {schema.path}'
+            return
 
-    job = schema[job]
+        self.job = schema[job]
+        yield from self.execute()
 
-    if options.get('help', False):
-        yield job.help or f'No help for {job.name}'
-        yield f'Try {cli2.GREEN}./sh.yml -h {job.name}{cli2.RESET}'
-        return
 
-    if console_script.parser.options.get('debug', False):
-        # generate from schema to support hooks
-        yield from schema.script(job.name)
-        return
+class JobRun(JobCommand):
+    def execute(self):
+        fd, path = tempfile.mkstemp(prefix='.shyml', dir='.')
+        with open(path, 'w') as f:
+            for line in self.job.schema.script(self.job.name):
+                f.write(line + '\n')
 
-    fd, path = tempfile.mkstemp(prefix='.shyml', dir='.')
-    with open(path, 'w') as f:
-        for line in schema.script(job.name):
-            f.write(line + '\n')
+        shell = os.getenv('shell', '/bin/bash -eux')
+        shell_arg = shell.split(' ') + [path]
 
-    shell_arg = shell.split(' ') + [path]
+        # 1337 ArGv InJeC710n H4ck: proxying argv from: shyml sh.yml JOB foobar
+        # And: proxying argv from: ./sh.yml JOB foobar
+        # Will cause $1 to be "foobar" in the script content of JOB
+        shell_arg += console_script.argv[3:]
 
-    # 1337 ArGv InJeC710n H4ck: proxying argv from: shyml sh.yml JOB foobar
-    # And: proxying argv from: ./sh.yml JOB foobar
-    # Will cause $1 to be "foobar" in the script content of JOB
-    shell_arg += console_script.argv[3:]
+        proc = subprocess.Popen(
+            shell_arg,
+            stdin=sys.stdin,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
+        proc.communicate()
+        os.unlink(path)
+        sys.exit(proc.returncode)
 
-    proc = subprocess.Popen(
-        shell_arg,
-        stdin=sys.stdin,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-    proc.communicate()
-    os.unlink(path)
-    sys.exit(proc.returncode)
+
+class JobDebug(JobCommand):
+    def execute(self):
+        yield from self.job.schema.script(self.job.name)
+
+
+run = JobRun('run')
+debug = JobDebug('debug')
 
 
 def ls(schema, prefix=None):
@@ -107,13 +100,13 @@ def ls(schema, prefix=None):
 
             yield line
         yield ''
-        yield 'For help of a job, run: -h JOB'
-        yield 'For script of a job, run: -d JOB'
+        yield 'Print out script of a job: ./sh.yml debug JOB'
+        yield 'Print out help of a job: ./sh.yml help JOB'
     else:
         yield f'{cli2.RED}Could not parse{cli2.RESET}: {schema.path} !'
 
 
-def help(path=None, job=None):
+def help(path, job=None):
     """
     Show help for a job.
 
@@ -124,6 +117,11 @@ def help(path=None, job=None):
 
     if not schema:
         yield 'sh.yml not found, please start with README'
+        return
+
+    if not job:
+        yield 'Job not specified, showing job list'
+        yield from ls(schema)
         return
 
     if job not in schema:
@@ -141,20 +139,12 @@ def help(path=None, job=None):
         ]),
         schema[job].help,
         f'Output generated bash job:',
-        f'{cli2.GREEN}shyml -d {job}{cli2.YELLOW}',
+        f'{cli2.GREEN}shyml debug {job}{cli2.YELLOW}',
         '',
-        f'Run the generated bash for this job:',
+        f'Run the generated script for this job:',
         f'{cli2.GREEN}shyml {job}{cli2.RESET}',
     ]
     yield '\n'.join(out)
-
-
-class ConsoleScript(cli2.ConsoleScript):
-    def __init__(self, doc=None, argv=None, default_command='help'):
-        if len(sys.argv) > 1 and os.path.exists(sys.argv[1]):
-            argv = [sys.argv[0]] + sys.argv[2:]
-            os.environ['SHYML'] = sys.argv[1]
-        super().__init__(doc, argv, default_command)
 
 
 class Job(dict):
@@ -166,7 +156,9 @@ class Job(dict):
         job.name = doc['name']
         job.hook = doc.get('hook', None)
         job.env = doc.get('env', {})
-        job.requires = doc.get('requires', [])
+        job.requires = doc.get('requires', doc.get('require', []))
+        if isinstance(job.requires, str):
+            job.requires = [job.requires]
         job.help = doc.get('help', '')
         job.color = doc.get('color', 'yellow')
         job.color_code = getattr(colorama.Fore, job.color.upper(), cli2.RESET)
@@ -200,7 +192,7 @@ class Job(dict):
             yield ''.join(['export ', str(key), '=', shlex.quote(str(value))])
 
         for name in self.requires:
-            yield from self.schema[name].script()
+            yield 'shyml_' + name
 
         script = self.get('script')
         if not script:
@@ -222,10 +214,19 @@ class Schema(dict):
         self.path = path
 
     def script(self, *jobs):
+        for job in self.values():
+            yield 'shyml_' + job.name + '() {'
+            if job.help:
+                for line in job.help.strip().split('\n'):
+                    yield f'    # {line}'
+            for line in self[job.name].script():
+                yield f'    {line}'
+            yield '}'
+
         for hook in self.hooks['before']:
             if hook.name == jobs[0]:
                 continue
-            yield from hook.script()
+            yield 'shyml_' + hook.name
 
         for name in jobs:
             if name not in self:
@@ -241,7 +242,7 @@ class Schema(dict):
                     '\n',
                     '\n'.join([f'- {i}' for i in sorted(self.keys())]),
                 ]))
-            yield from self[name].script()
+            yield 'shyml_' + name
 
     def parse(self):
         with open(self.path, 'r') as f:
@@ -279,4 +280,4 @@ class Schema(dict):
 console_script = cli2.ConsoleScript(
     __doc__,
     default_command='run'
-).add_commands(run)
+).add_commands(run, help, debug)

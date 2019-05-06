@@ -8,23 +8,25 @@ name: install
 help: |
   Setup and activate a venv for a python executable
 
-  Having venv=none makes this job a no-op.
+  If venv=none, it will not do any venv.
+  If venv=user, it will use pip install --user.
 script: |
-  if [ "${venv-}" != "none" ]; then
-    python=${python-python3}
-    venv=${path-.venv.${python-python3}}
-
-    test -d $venv || virtualenv --python=$python $venv
-
-    set +eux; echo activating $venv; source $venv/bin/activate; set -eux
+  if [ "${venv-}" = "user" ]; then
+    pip_install="pip install --user"
+  elif [ "${venv-}" != "none" ]; then
+    export python="${python-python3}"
+    export path="${path-.venv.$python}"
+    test -d $path || virtualenv --python=$python $path
+    set +eux; echo activating $path; source $path/bin/activate; set -eux
   fi
-
-  pip install -e .
+  ${pip_install-pip install} -Ue .${1-}
 
 ---
 name: test
-script: py.test -v $@
 help: Test sh.yml
-requires:
-- install
-script: pip install pytest && pytest $@
+script: shyml_install [test] && pytest -v $@
+
+---
+name: testrewrite
+help: Test sh.yml
+script: FIXTURE_REWRITE=1 shyml_test

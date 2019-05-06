@@ -1,25 +1,14 @@
 import cli2
+import pytest
 
 
-def test_hello_help():
-    cli2.autotest('tests/hello_help.txt', 'shyml -h sh.yml hello')
-
-
-def test_hello_debug():
-    cli2.autotest('tests/hello_debug.txt', 'shyml -d sh.yml hello')
-
-
-def test_install_debug():
-    cli2.autotest('tests/install_help.txt', 'shyml -h sh.yml install')
-
-
-def test_typo():
-    cli2.autotest('tests/typo.txt', 'shyml sh.yml foo')
-
-
-def test_typo_help():
-    cli2.autotest('tests/typo_help.txt', 'shyml -h sh.yml foo')
-
-
-def test_typo_debug():
-    cli2.autotest('tests/typo_debug.txt', 'shyml -d sh.yml foo')
+@pytest.mark.parametrize('path,cmd', [
+    ('tests/hello_help.txt', 'shyml sh.yml help hello'),
+    ('tests/hello_debug.txt', 'shyml sh.yml debug hello'),
+    ('tests/install_help.txt', 'shyml sh.yml help install'),
+    ('tests/typo.txt', 'shyml sh.yml foo'),
+    ('tests/typo_help.txt', 'shyml help sh.yml foo'),
+    ('tests/typo_debug.txt', 'shyml debug sh.yml foo'),
+])
+def test_shyml(path, cmd):
+    cli2.autotest(path, cmd)

@@ -1,8 +1,14 @@
-command: shyml -h sh.yml install
+command: shyml sh.yml help install
 retcode: 0
 stdout:
+Showing help for install
 Setup and activate a venv for a python executable
 
-Having venv=none makes this job a no-op.
+If venv=none, it will not do any venv.
+If venv=user, it will use pip install --user.
 
-Try ./sh.yml -h install
+Output generated bash job:
+shyml debug install
+
+Run the generated script for this job:
+shyml install
