@@ -14,8 +14,7 @@ setup:
 pypi:
   stage: deploy
   image: yourlabs/python
-  except: [tags]
   script: pypi-release
-  only: [master]
+  only: [tags]
   # this is in paid gitlab only
   # trigger: oss/containers
