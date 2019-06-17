@@ -27,4 +27,4 @@ shyml_testrewrite() {
     # Test sh.yml
     FIXTURE_REWRITE=1 shyml_test
 }
-shyml_hello
+shyml_hello "$@"

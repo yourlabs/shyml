@@ -245,7 +245,7 @@ class Schema(dict):
                     '\n',
                     '\n'.join([f'- {i}' for i in sorted(self.keys())]),
                 ]))
-            yield 'shyml_' + name
+            yield 'shyml_' + name + ' "$@"'
 
     def parse(self):
         with open(self.path, 'r') as f:
