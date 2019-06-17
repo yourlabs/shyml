@@ -215,6 +215,9 @@ class Schema(dict):
 
     def script(self, *jobs):
         for job in self.values():
+            if not job.get('script', ''):
+                continue
+
             yield 'shyml_' + job.name + '() {'
             if job.help:
                 for line in job.help.strip().split('\n'):
