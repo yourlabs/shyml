@@ -1,10 +1,4 @@
-command: shyml sh.yml help hello
+command: ./sh.yml help hello
 retcode: 0
 stdout:
-Showing help for hello
-
-Output generated bash job:
-shyml debug hello
-
-Run the generated script for this job:
-shyml hello
+Example

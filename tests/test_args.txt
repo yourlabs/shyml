@@ -1,0 +1,7 @@
+command: ./sh.yml hello test
+retcode: 0
+stdout:
+hello test
+stderr:
++ shyml_hello test
++ echo hello test
