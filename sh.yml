@@ -2,6 +2,7 @@
 
 name: hello
 script: echo hello $@
+help: Example
 
 ---
 name: install

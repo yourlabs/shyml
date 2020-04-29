@@ -1,0 +1,4 @@
+command: ./sh.yml debug test
+retcode: 0
+stdout:
+shyml_install [test] && pytest -v $@

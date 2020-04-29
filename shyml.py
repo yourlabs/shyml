@@ -3,7 +3,6 @@ Orchestrate shell script units from a single sh.yml file.
 """
 
 import cli2
-import colorama
 import os
 import shlex
 import subprocess
@@ -12,44 +11,14 @@ import tempfile
 import yaml
 
 
-LOGO = f'{cli2.GREEN}Sh{cli2.YELLOW}Y{cli2.RED}ml{cli2.RESET}'
+LOGO = f'{cli2.c.green}Sh{cli2.c.yellow}Y{cli2.c.red}ml{cli2.c.reset}'
 
 
-class JobCommand:
-    def __init__(self, name):
-        self.__name__ = name
-
-    def __call__(self, path=None, job=None, *args):
-        """
-        Render jobs defined in ./sh.yml or any sh.yml file.
-        """
-        if not path:
-            yield from help()
-            return
-
-        if not os.path.exists(path):
-            raise cli2.Cli2Exception(f'{path} does not exist')
-
-        schema = Schema.factory(path)
-
-        if not job:
-            yield from ls(schema)
-            return
-
-        if job not in schema:
-            yield f'{cli2.RED}{job}{cli2.RESET} not found in {schema.path}'
-            return
-
-        self.job = schema[job]
-        yield from self.execute()
-
-
-class JobRun(JobCommand):
-    def execute(self):
+class ConsoleScript(cli2.Group):
+    def run(self, *args):
         fd, path = tempfile.mkstemp(prefix='.shyml', dir='.')
         with open(path, 'w') as f:
-            for line in self.job.schema.script(self.job.name):
-                f.write(line + '\n')
+            f.write(self.schema.script(self.current))
 
         shell = os.getenv('shell', '/bin/bash -eux')
         shell_arg = shell.split(' ') + [path]
@@ -57,7 +26,7 @@ class JobRun(JobCommand):
         # 1337 ArGv InJeC710n H4ck: proxying argv from: shyml sh.yml JOB foobar
         # And: proxying argv from: ./sh.yml JOB foobar
         # Will cause $1 to be "foobar" in the script content of JOB
-        shell_arg += console_script.argv[3:]
+        shell_arg += list(args)
 
         proc = subprocess.Popen(
             shell_arg,
@@ -69,82 +38,36 @@ class JobRun(JobCommand):
         os.unlink(path)
         sys.exit(proc.returncode)
 
+    def help(self, *args, **kwargs):
+        if args and args[0] in self.schema:
+            return self.schema[args[0]].help
+        return super().help(*args, **kwargs)
 
-class JobDebug(JobCommand):
-    def execute(self):
-        yield from self.job.schema.script(self.job.name)
+    def debug(self, name):
+        return self.schema[name].script()
 
+    def __call__(self, *argv):
+        if not argv:
+            print('Missing path to sh.yml argument')
+            sys.exit(1)
 
-run = JobRun('run')
-debug = JobDebug('debug')
+        if not os.path.exists(argv[0]):
+            print('File not found: ' + argv[0])
+            sys.exit(1)
 
+        self.add(self.help, doc='Show help for command')
+        self.add(self.debug, doc='Show script for command')
 
-def ls(schema, prefix=None):
-    if schema:
-        yield f'{LOGO} has found the following jobs:'
-        yield ''
-
-        width = len(max(schema.keys(), key=len)) + 1
-
-        for name in sorted(schema.keys()):
-            display = name
-            job = schema[name]
-            line = ' '
-
-            line += job.color_code
-            line += name
-            line += cli2.RESET
-
-            line += (width - len(display)) * ' '
-            line += job.help.split('\n')[0]
-
-            yield line
-        yield ''
-        yield 'Print out script of a job: ./sh.yml debug JOB'
-        yield 'Print out help of a job: ./sh.yml help JOB'
-    else:
-        yield f'{cli2.RED}Could not parse{cli2.RESET}: {schema.path} !'
+        self.schema = Schema.factory(argv[0])
+        for name, job in self.schema.items():
+            self.add(self.run, name=name, doc=job.help)
+        if len(argv) > 1:
+            self.current = argv[1]
+        argv = argv[1:]
+        return super().__call__(*argv)
 
 
-def help(path, job=None):
-    """
-    Show help for a job.
-
-    To get the list of jobs that you can get help for, run shyml without
-    argument.
-    """
-    schema = Schema.factory(path)
-
-    if not schema:
-        yield 'sh.yml not found, please start with README'
-        return
-
-    if not job:
-        yield 'Job not specified, showing job list'
-        yield from ls(schema)
-        return
-
-    if job not in schema:
-        yield f'{cli2.RED}{job}{cli2.RESET} not found in {schema.path}'
-        return
-
-    out = [
-        ' '.join([
-            'Showing help for',
-            ''.join([
-                cli2.GREEN,
-                job,
-                cli2.RESET,
-            ]),
-        ]),
-        schema[job].help,
-        f'Output generated bash job:',
-        f'{cli2.GREEN}shyml debug {job}{cli2.YELLOW}',
-        '',
-        f'Run the generated script for this job:',
-        f'{cli2.GREEN}shyml {job}{cli2.RESET}',
-    ]
-    yield '\n'.join(out)
+cli = ConsoleScript(__doc__)
 
 
 class Job(dict):
@@ -161,7 +84,7 @@ class Job(dict):
             job.requires = [job.requires]
         job.help = doc.get('help', '')
         job.color = doc.get('color', 'yellow')
-        job.color_code = getattr(colorama.Fore, job.color.upper(), cli2.RESET)
+        job.color_code = getattr('cli2.c', job.color.upper(), cli2.c.reset)
         return job
 
     def visit(self, schema):
@@ -182,6 +105,7 @@ class Job(dict):
                     self.parent = job
 
     def script(self):
+        out = []
         env = dict()
         for name in self.requires:
             if self.schema[name].env:
@@ -189,10 +113,12 @@ class Job(dict):
         env.update(self.env)
 
         for key, value in env.items():
-            yield ''.join(['export ', str(key), '=', shlex.quote(str(value))])
+            out.append(''.join([
+                'export ', str(key), '=', shlex.quote(str(value))
+            ]))
 
         for name in self.requires:
-            yield 'shyml_' + name
+            out.append('shyml_' + name)
 
         script = self.get('script')
         if not script:
@@ -203,7 +129,8 @@ class Job(dict):
 
         for chunk in script:
             if chunk:
-                yield chunk
+                out.append(chunk)
+        return '\n'.join(out)
 
 
 class Schema(dict):
@@ -214,35 +141,38 @@ class Schema(dict):
         self.path = path
 
     def script(self, *jobs):
+        out = []
         for job in self.values():
-            yield 'shyml_' + job.name + '() {'
+            out.append('shyml_' + job.name + '() {')
             if job.help:
                 for line in job.help.strip().split('\n'):
-                    yield f'    # {line}'
-            for line in self[job.name].script():
-                yield f'    {line}'
-            yield '}'
+                    out.append(f'    # {line}')
+            out.append(self[job.name].script().replace('\n', '    \n'))
+            out.append('}')
 
         for hook in self.hooks['before']:
             if hook.name == jobs[0]:
                 continue
-            yield 'shyml_' + hook.name
+            out.append('shyml_' + hook.name)
 
         for name in jobs:
             if name not in self:
-                raise cli2.Cli2Exception(''.join([
-                    cli2.RED,
+                out.append(''.join([
+                    cli2.c.red,
                     'Job not found: ',
-                    cli2.RESET,
+                    cli2.c.reset,
                     name,
                     '\n',
-                    cli2.GREEN,
+                    cli2.c.green,
                     'Job founds:',
-                    cli2.RESET,
+                    cli2.c.reset,
                     '\n',
                     '\n'.join([f'- {i}' for i in sorted(self.keys())]),
                 ]))
-            yield 'shyml_' + name + ' "$@"'
+                sys.exit(1)
+            out.append('shyml_' + name + ' "$@"')
+
+        return '\n'.join(out)
 
     def parse(self):
         with open(self.path, 'r') as f:
@@ -270,14 +200,8 @@ class Schema(dict):
 
         self = cls(path)
         if not os.path.exists(path):
-            print(f'{cli2.RED}Could not find{cli2.RESET} {path}')
+            print(f'{cli2.c.red}Could not find{cli2.c.reset} {path}')
         else:
             self.parse()
 
         return self
-
-
-console_script = cli2.ConsoleScript(
-    __doc__,
-    default_command='run'
-).add_commands(run, help, debug)

@@ -3,7 +3,7 @@ qa:
   image: yourlabs/python
   script: flake8
 
-setup:
+pytest:
   stage: test
   image: yourlabs/python
   script:
